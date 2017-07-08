@@ -69,7 +69,7 @@ set_root_atoms(Pixmap pm) {
 
 	/* Doing this to cleanup the old background */
 	atom_root = XInternAtom(dpy, "_XROOTMAP_ID", True);
-	atom_eroot = XInternalAtom(dpy, "ESETROOT_PMAP_ID", True);
+	atom_eroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", True);
 
 
 	if(atom_root != None && atom_eroot != None) {
