@@ -14,8 +14,6 @@
 #include <X11/extensions/Xinerama.h>
 #endif
 
-#define MIN(a, b)       ((a) < (b) ? (a) : (b))
-#define MAX(a, b)       ((a) > (b) ? (a) : (b))
 #define LENGTH(x)       (sizeof x / sizeof x[0])
 
 /* image modes */
@@ -38,7 +36,7 @@ static struct Monitor monitors[8];
 static Imlib_Image images[LENGTH(monitors)];
 static short rotation[LENGTH(monitors)];
 
-static const exifflip = (1 << 2) | (1 << 4) | (1 << 5) | (1 << 7);
+static const int exifflip = (1 << 2) | (1 << 4) | (1 << 5) | (1 << 7);
 
 /* free images before exit */
 void
@@ -275,7 +273,7 @@ setup(char *paths[], int c, const char *col) {
         ExifData *edata;
         edata = exif_data_new_from_file(paths[i]);
         if (!edata) {
-          fprintf(stderr, "Warning: No EXIF data was readable from file %s\n.");
+          fprintf(stderr, "Warning: No EXIF data was readable from file %s\n.", paths[i]);
           rotation[nimage] = 1;
         }
         else {
