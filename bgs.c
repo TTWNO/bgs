@@ -17,7 +17,7 @@
 #define LENGTH(x)       (sizeof x / sizeof x[0])
 
 /* image modes */
-enum { ModeCenter, ModeZoom, ModeScale, ModeLast };
+enum { ModeTile, ModeCenter, ModeZoom, ModeScale, ModeLast };
 
 struct Monitor {
 	int x, y, w, h;
@@ -179,7 +179,9 @@ drawbg(void) {
 				nx = monitors[i].x;
 			}
 			break;
-		default: /* ModeScale */
+    case ModeTile:
+      break;
+    default: /* ModeScale */
 			factor = MAX((double)w / monitors[i].w,
 				     (double)h / monitors[i].h);
 			nw = w / factor;
@@ -187,7 +189,14 @@ drawbg(void) {
 			nx = monitors[i].x + (monitors[i].w - nw) / 2;
 			ny = monitors[i].y + (monitors[i].h - nh) / 2;
 		}
-		imlib_blend_image_onto_image(tmpimg, 0, 0, 0, w, h,
+    if (mode == ModeTile) {
+      for (int dx = 0; dx <= sw; dx += w) {
+        for (int dy = 0; dy <= sh; dy += h)
+          imlib_blend_image_onto_image(tmpimg, 0, 0, 0, w, h, dx, dy, w, h);
+      }
+    }
+    else 
+		  imlib_blend_image_onto_image(tmpimg, 0, 0, 0, w, h,
 					     nx, ny, nw, nh);
 		imlib_context_set_image(tmpimg);
 		imlib_free_image();
@@ -322,8 +331,11 @@ main(int argc, char *argv[]) {
 	int opt;
 	const char *col = NULL;
 
-	while((opt = getopt(argc, argv, "ecC:Rvxz")) != -1)
+	while((opt = getopt(argc, argv, "tecC:Rvxz")) != -1)
 		switch(opt) {
+      case 't':
+        mode = ModeTile;
+        break;
       case 'e':
         exif = True;
         break;
@@ -347,7 +359,7 @@ main(int argc, char *argv[]) {
 	  		mode = ModeZoom;
 		  	break;
 		  default:
-			  die("usage: bgs [-e] [-v] [-c] [-C hex] [-z] [-R] [-x] [IMAGE]...\n");
+			  die("usage: bgs [-e] [-v] [-t] [-c] [-C hex] [-z] [-R] [-x] [IMAGE]...\n");
 		}
 	argc -= optind;
 	argv += optind;
