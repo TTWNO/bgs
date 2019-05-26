@@ -12,8 +12,8 @@ XINERAMALIBS = -lXinerama
 XINERAMAFLAGS = -DXINERAMA
 
 # includes and libs
-INCS = `pkg-config --cflags imlib2 x11`
-LIBS = `pkg-config --libs imlib2 x11` ${XINERAMALIBS}
+INCS = `pkg-config --cflags libexif imlib2 x11`
+LIBS = `pkg-config --libs libexif imlib2 x11` ${XINERAMALIBS}
 
 # flags
 CPPFLAGS += -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}

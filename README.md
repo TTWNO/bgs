@@ -1,9 +1,9 @@
 # bgs - back ground setter
-bgs is an extremely fast and small background setter for X. This fork of bgs fixes a few bugs and will (future) have support for EXIF orientation.
+bgs is an extremely fast and small background setter for X. This fork of bgs fixes a few bugs and added support for automatic EXIF detection.
 
 
 ## Requirements
-In order to build bgs you need the Xlib and Imlib2 header files.
+In order to build bgs you need the Xlib, Imlib2, and libexif header files.
 
 
 ## Installation

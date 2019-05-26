@@ -9,6 +9,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <Imlib2.h>
+#include <libexif/exif-data.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
 #endif
@@ -26,14 +27,18 @@ struct Monitor {
 
 static int sx, sy, sw, sh;		/* screen geometry */
 static unsigned int mode = ModeScale;	/* image mode */
-static Bool rotate = True;
+static Bool rotate = False;
 static Bool running = False;
+static Bool exif = False;
 static Display *dpy;
 static Window root;
 static int nmonitor, nimage;	/* Amount of monitors/available background
 				   images */
 static struct Monitor monitors[8];
 static Imlib_Image images[LENGTH(monitors)];
+static short rotation[LENGTH(monitors)];
+
+static const exifflip = (1 << 2) | (1 << 4) | (1 << 5) | (1 << 7);
 
 /* free images before exit */
 void
@@ -106,6 +111,7 @@ drawbg(void) {
 	double factor;
 	Pixmap pm;
 	Imlib_Image tmpimg, buffer;
+  Bool flip;
 
 	pm = XCreatePixmap(dpy, root, sw, sh,
 			   DefaultDepth(dpy, DefaultScreen(dpy)));
@@ -121,7 +127,32 @@ drawbg(void) {
 		if(!(tmpimg = imlib_clone_image()))
 			die("Error: Cannot clone image.\n");
 		imlib_context_set_image(tmpimg);
-		if(rotate && ((monitors[i].w > monitors[i].h && w < h) ||
+    if(exif) {
+      flip = False;
+      if ((1 << rotation[i]) & exifflip) {
+        flip = True;
+        rotation[i] += (rotation[i] <= 4 ? -1 : 1);
+      }
+      switch(rotation[i]) {
+        case 8: 
+          imlib_image_orientate(3);
+          break;
+        case 3:
+          imlib_image_orientate(2);
+          break;
+        case 6:
+          imlib_image_orientate(1);
+          break;
+      }
+      if (flip)
+        imlib_image_flip_horizontal();
+      if ((rotation[i] == 6) || (rotation[i] == 8)) {
+        tmp= w;
+        w = h;
+        h = tmp;
+      }
+    }
+    if(rotate && ((monitors[i].w > monitors[i].h && w < h) ||
 		   (monitors[i].w < monitors[i].h && w > h))) {
 			imlib_image_orientate(1);
 			tmp = w;
@@ -239,8 +270,24 @@ setup(char *paths[], int c, const char *col) {
 
 	/* Loading images */
 	for(nimage = i = 0; i < c && i < LENGTH(images); i++) {
-		if((images[nimage] = imlib_load_image_without_cache(paths[i])))
-			nimage++;
+		if((images[nimage] = imlib_load_image_without_cache(paths[i]))) {
+      if (exif) {
+        ExifData *edata;
+        edata = exif_data_new_from_file(paths[i]);
+        if (!edata) {
+          fprintf(stderr, "Warning: No EXIF data was readable from file %s\n.");
+          rotation[nimage] = 1;
+        }
+        else {
+          ExifIfd ifd = EXIF_IFD_0;
+          ExifEntry *entry = exif_content_get_entry(edata->ifd[ifd], EXIF_TAG_ORIENTATION);
+          rotation[nimage] = exif_get_short(entry->data, exif_data_get_byte_order(edata));
+       }
+      }
+      else
+        rotation[nimage] = 1;
+      nimage++;
+    }
 		else {
 			fprintf(stderr, "Warning: Cannot load file `%s`. "
 					"Ignoring.\n", paths[nimage]);
@@ -275,29 +322,32 @@ main(int argc, char *argv[]) {
 	int opt;
 	const char *col = NULL;
 
-	while((opt = getopt(argc, argv, "cC:Rvxz")) != -1)
+	while((opt = getopt(argc, argv, "ecC:Rvxz")) != -1)
 		switch(opt) {
-		case 'c':
-			mode = ModeCenter;
-			break;
-		case 'C':
-			col = optarg;
-			break;
-		case 'R':
-			rotate = False;
-			break;
-		case 'v':
-			printf("bgs-"VERSION", © 2010 bgs engineers, "
-			       "see LICENSE for details\n");
-			return EXIT_SUCCESS;
-		case 'x':
-			running = True;
-			break;
-		case 'z':
-			mode = ModeZoom;
-			break;
-		default:
-			die("usage: bgs [-v] [-c] [-C hex] [-z] [-R] [-x] [IMAGE]...\n");
+      case 'e':
+        exif = True;
+        break;
+      case 'c':
+			  mode = ModeCenter;
+			  break;
+		  case 'C':
+			  col = optarg;
+			  break;
+  		case 'R':
+  			rotate = True;
+  			break;
+	  	case 'v':
+		  	printf("bgs-"VERSION", © 2010 bgs engineers, "
+			         "see LICENSE for details\n");
+	  		return EXIT_SUCCESS;
+	  	case 'x':
+		  	running = True;
+		  	break;
+  		case 'z':
+	  		mode = ModeZoom;
+		  	break;
+		  default:
+			  die("usage: bgs [-e] [-v] [-c] [-C hex] [-z] [-R] [-x] [IMAGE]...\n");
 		}
 	argc -= optind;
 	argv += optind;
