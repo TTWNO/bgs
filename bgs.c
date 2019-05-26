@@ -173,7 +173,9 @@ drawbg(void) {
 				ny = monitors[i].y;
 			}
 			else {
-				ny = monitors[i].y + (monitors[i].h - nh) / 2;
+				nw = monitors[i].w;
+        nh = nw * h / w;
+        ny = monitors[i].y + (monitors[i].h - nh) / 2;
 				nx = monitors[i].x;
 			}
 			break;
