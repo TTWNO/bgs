@@ -118,89 +118,91 @@ drawbg(void) {
 	imlib_context_set_image(buffer);
 	imlib_image_fill_rectangle(0, 0, sw, sh);
 	imlib_context_set_blend(1);
-	for(i = 0; i < nmonitor; i++) {
-		imlib_context_set_image(images[i % nimage]);
-		w = imlib_image_get_width();
-		h = imlib_image_get_height();
-		if(!(tmpimg = imlib_clone_image()))
-			die("Error: Cannot clone image.\n");
-		imlib_context_set_image(tmpimg);
-    if(exif) {
-      flip = False;
-      if ((1 << rotation[i]) & exifflip) {
-        flip = True;
-        rotation[i] += (rotation[i] <= 4 ? -1 : 1);
+  if (nimage != 0) {
+    for(i = 0; i < nmonitor; i++) {
+      imlib_context_set_image(images[i % nimage]);
+      w = imlib_image_get_width();
+      h = imlib_image_get_height();
+      if(!(tmpimg = imlib_clone_image()))
+        die("Error: Cannot clone image.\n");
+      imlib_context_set_image(tmpimg);
+      if(exif) {
+        flip = False;
+        if ((1 << rotation[i]) & exifflip) {
+          flip = True;
+          rotation[i] += (rotation[i] <= 4 ? -1 : 1);
+        }
+        switch(rotation[i]) {
+          case 8: 
+            imlib_image_orientate(3);
+            break;
+          case 3:
+            imlib_image_orientate(2);
+            break;
+          case 6:
+            imlib_image_orientate(1);
+            break;
+        }
+        if (flip)
+          imlib_image_flip_horizontal();
+        if ((rotation[i] == 6) || (rotation[i] == 8)) {
+          tmp= w;
+          w = h;
+          h = tmp;
+        }
       }
-      switch(rotation[i]) {
-        case 8: 
-          imlib_image_orientate(3);
-          break;
-        case 3:
-          imlib_image_orientate(2);
-          break;
-        case 6:
-          imlib_image_orientate(1);
-          break;
-      }
-      if (flip)
-        imlib_image_flip_horizontal();
-      if ((rotation[i] == 6) || (rotation[i] == 8)) {
-        tmp= w;
+      if(rotate && ((monitors[i].w > monitors[i].h && w < h) ||
+         (monitors[i].w < monitors[i].h && w > h))) {
+        imlib_image_orientate(1);
+        tmp = w;
         w = h;
         h = tmp;
       }
-    }
-    if(rotate && ((monitors[i].w > monitors[i].h && w < h) ||
-		   (monitors[i].w < monitors[i].h && w > h))) {
-			imlib_image_orientate(1);
-			tmp = w;
-			w = h;
-			h = tmp;
-		}
-		imlib_context_set_image(buffer);
-		switch(mode) {
-		case ModeCenter:
-			nw = (monitors[i].w - w) / 2;
-			nh = (monitors[i].h - h) / 2;
-			nx = monitors[i].x + (monitors[i].w - nw) / 2;
-			ny = monitors[i].y + (monitors[i].h - nh) / 2;
-			break;
-		case ModeZoom:
-			if(((float)w / h) > ((float)monitors[i].w / monitors[i].h)) {
-				nh = monitors[i].h;
-				nw = nh * w / h;
-				nx = monitors[i].x + (monitors[i].w - nw) / 2;
-				ny = monitors[i].y;
-			}
-			else {
-				nw = monitors[i].w;
-        nh = nw * h / w;
+      imlib_context_set_image(buffer);
+      switch(mode) {
+      case ModeCenter:
+        nw = (monitors[i].w - w) / 2;
+        nh = (monitors[i].h - h) / 2;
+        nx = monitors[i].x + (monitors[i].w - nw) / 2;
         ny = monitors[i].y + (monitors[i].h - nh) / 2;
-				nx = monitors[i].x;
-			}
-			break;
-    case ModeTile:
-      break;
-    default: /* ModeScale */
-			factor = MAX((double)w / monitors[i].w,
-				     (double)h / monitors[i].h);
-			nw = w / factor;
-			nh = h / factor;
-			nx = monitors[i].x + (monitors[i].w - nw) / 2;
-			ny = monitors[i].y + (monitors[i].h - nh) / 2;
-		}
-    if (mode == ModeTile) {
-      for (int dx = 0; dx <= sw; dx += w) {
-        for (int dy = 0; dy <= sh; dy += h)
-          imlib_blend_image_onto_image(tmpimg, 0, 0, 0, w, h, dx, dy, w, h);
+        break;
+      case ModeZoom:
+        if(((float)w / h) > ((float)monitors[i].w / monitors[i].h)) {
+          nh = monitors[i].h;
+          nw = nh * w / h;
+          nx = monitors[i].x + (monitors[i].w - nw) / 2;
+          ny = monitors[i].y;
+        }
+        else {
+          nw = monitors[i].w;
+          nh = nw * h / w;
+          ny = monitors[i].y + (monitors[i].h - nh) / 2;
+          nx = monitors[i].x;
+        }
+        break;
+      case ModeTile:
+        break;
+      default: /* ModeScale */
+        factor = MAX((double)w / monitors[i].w,
+               (double)h / monitors[i].h);
+        nw = w / factor;
+        nh = h / factor;
+        nx = monitors[i].x + (monitors[i].w - nw) / 2;
+        ny = monitors[i].y + (monitors[i].h - nh) / 2;
       }
+      if (mode == ModeTile) {
+        for (int dx = 0; dx <= sw; dx += w) {
+          for (int dy = 0; dy <= sh; dy += h)
+            imlib_blend_image_onto_image(tmpimg, 0, 0, 0, w, h, dx, dy, w, h);
+        }
+      }
+      else 
+        imlib_blend_image_onto_image(tmpimg, 0, 0, 0, w, h,
+                 nx, ny, nw, nh);
+      imlib_context_set_image(tmpimg);
+      imlib_free_image();
     }
-    else 
-		  imlib_blend_image_onto_image(tmpimg, 0, 0, 0, w, h,
-					     nx, ny, nw, nh);
-		imlib_context_set_image(tmpimg);
-		imlib_free_image();
-	}
+  }
 	imlib_context_set_blend(0);
 	imlib_context_set_image(buffer);
 	imlib_context_set_drawable(root);
@@ -303,8 +305,6 @@ setup(char *paths[], int c, const char *col) {
 			continue;
 		}
 	}
-	if(nimage == 0)
-		die("Error: No image to draw.\n");
 
 	/* set up X */
 	screen = DefaultScreen(dpy);
@@ -363,7 +363,9 @@ main(int argc, char *argv[]) {
 		}
 	argc -= optind;
 	argv += optind;
-
+  
+  if(!col && (argc == 0))
+    die("Error: No valid arguments given.\n");
 	if(!col)
 		col = "#000000";
 	if(!(dpy = XOpenDisplay(NULL)))

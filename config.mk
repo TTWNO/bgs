@@ -17,7 +17,7 @@ LIBS = `pkg-config --libs libexif imlib2 x11` ${XINERAMALIBS}
 
 # flags
 CPPFLAGS += -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}
-CFLAGS += -std=c99 -pedantic -Wall ${INCS} ${CPPFLAGS}
+CFLAGS += -g -std=c99 -pedantic -Wall ${INCS} ${CPPFLAGS}
 LDFLAGS += -lm ${LIBS}
 
 # compiler and linker
